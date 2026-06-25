@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { DataSource, In, Repository } from 'typeorm';
 import { User } from '../entity/user.entity';
-import { UserSetting } from '../entity/user-setting.entity';
 import { UserStat } from '../entity/user-stat.entity';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { DeleteUserDto } from '../dto/delete-user.dto';
@@ -20,8 +19,6 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(UserSetting)
-    private readonly userSettingRepository: Repository<UserSetting>,
     @InjectRepository(UserStat)
     private readonly userStatRepository: Repository<UserStat>,
     private readonly dataSource: DataSource,
@@ -30,7 +27,6 @@ export class UserService {
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
       relations: {
-        setting: true,
         stat: true,
       },
       order: {
@@ -43,7 +39,6 @@ export class UserService {
     const user = await this.userRepository.findOne({
       where: { id },
       relations: {
-        setting: true,
         stat: true,
       },
     });
@@ -57,40 +52,35 @@ export class UserService {
     this.ensureOwnUser(currentUserId, id);
     const user = await this.findOne(id);
 
-    if (dto.email && dto.email !== user.email) {
-      const existingUser = await this.userRepository.findOne({ where: { email: dto.email } });
+    if (dto.email && dto.email.trim().toLowerCase() !== user.email) {
+      const email = dto.email.trim().toLowerCase();
+      const existingUser = await this.userRepository.findOne({ where: { email } });
       if (existingUser) {
         throw new ConflictException('Email already exists');
       }
-      user.email = dto.email;
+      user.email = email;
     }
 
     if (dto.password) {
       user.passwordHash = await bcrypt.hash(dto.password, 10);
     }
 
-    await this.userRepository.save(user);
-
-    if (dto.botPersonality) {
-      let setting = await this.userSettingRepository.findOne({ where: { userId: id } });
-      if (!setting) {
-        setting = this.userSettingRepository.create({ userId: id });
-      }
-      setting.botPersonality = dto.botPersonality;
-      await this.userSettingRepository.save(setting);
+    if (dto.displayName !== undefined) {
+      user.displayName = dto.displayName.trim();
+      user.profileCompleted = Boolean(user.displayName && user.avatarUrl);
     }
+
+    await this.userRepository.save(user);
 
     return this.findOne(id);
   }
 
   async delete(currentUserId: string, id: string, dto: DeleteUserDto) {
     this.ensureOwnUser(currentUserId, id);
-    const reason = dto?.reason?.trim();
-    if (!reason) {
-      throw new BadRequestException('Delete reason is required');
+    const user = await this.findOne(id);
+    if (dto.email.trim().toLowerCase() !== user.email) {
+      throw new BadRequestException('Email confirmation does not match this account');
     }
-
-    await this.findOne(id);
 
     await this.dataSource.transaction(async (manager) => {
       const habits = await manager.find(Habit, { where: { userId: id }, select: { id: true } });
@@ -106,7 +96,6 @@ export class UserService {
       await manager.delete(Habit, { userId: id });
       await manager.delete(UserAchievement, { userId: id });
       await manager.delete(UserTree, { userId: id });
-      await manager.delete(UserSetting, { userId: id });
       await manager.delete(UserStat, { userId: id });
       await manager.delete(User, { id });
     });
@@ -114,8 +103,22 @@ export class UserService {
     return {
       deleted: true,
       id,
-      reason,
     };
+  }
+
+  async uploadAvatar(currentUserId: string, id: string, file?: { buffer: Buffer; mimetype: string; size: number }) {
+    this.ensureOwnUser(currentUserId, id);
+    if (!file) throw new BadRequestException('Avatar image is required');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      throw new BadRequestException('Avatar must be a JPEG, PNG, or WebP image');
+    }
+    if (file.size > 2 * 1024 * 1024) throw new BadRequestException('Avatar must be 2 MB or smaller');
+
+    const user = await this.findOne(id);
+    user.avatarUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    user.profileCompleted = Boolean(user.displayName && user.avatarUrl);
+    await this.userRepository.save(user);
+    return this.findOne(id);
   }
 
   private ensureOwnUser(currentUserId: string, id: string) {

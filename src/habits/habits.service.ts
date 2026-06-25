@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CreateHabitDto } from './dto/create-habit.dto';
 import { DailyLog } from './entity/daily-log.entity';
 import { HabitStat } from './entity/habit-stat.entity';
@@ -21,6 +21,7 @@ export class HabitsService {
     @InjectRepository(History)
     private readonly historyRepository: Repository<History>,
     private readonly treeService: TreeService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(userId: string) {
@@ -42,26 +43,26 @@ export class HabitsService {
   }
 
   async create(userId: string, dto: CreateHabitDto) {
-    const habit = await this.habitRepository.save(
-      this.habitRepository.create({
+    const scheduleDays = this.normalizeScheduleDays(dto.scheduleDays);
+    return this.dataSource.transaction(async (manager) => {
+      const habit = await manager.save(Habit, manager.create(Habit, {
         userId,
-        name: dto.name,
+        name: dto.name.trim(),
         category: dto.category,
         icon: dto.icon || 'circle',
-        frequency: dto.frequency || HabitFrequency.DAILY,
-      }),
-    );
+        frequency: scheduleDays.length === 7 ? HabitFrequency.DAILY : HabitFrequency.WEEKLY,
+        scheduleDays,
+      }));
 
-    await this.habitStatRepository.save(
-      this.habitStatRepository.create({
+      await manager.save(HabitStat, manager.create(HabitStat, {
         habitId: habit.id,
         currentStreak: 0,
         longestStreak: 0,
         totalChecked: 0,
-      }),
-    );
+      }));
 
-    return habit;
+      return habit;
+    });
   }
 
   async checkToday(userId: string, habitId: string) {
@@ -101,7 +102,9 @@ export class HabitsService {
 
   async getDailyLog(userId: string, date?: string) {
     const targetDate = date || this.formatDate(new Date());
-    const habits = await this.habitRepository.find({ where: { userId }, order: { createdAt: 'DESC' } });
+    const allHabits = await this.habitRepository.find({ where: { userId }, order: { createdAt: 'DESC' } });
+    const weekday = new Date(`${targetDate}T12:00:00`).getDay();
+    const habits = allHabits.filter((habit) => this.isScheduledForDay(habit, weekday));
     const logs = await this.dailyLogRepository.find({ where: { userId, date: targetDate } });
 
     return {
@@ -165,5 +168,17 @@ export class HabitsService {
     const nextDate = new Date(date);
     nextDate.setDate(nextDate.getDate() + days);
     return nextDate;
+  }
+
+  private normalizeScheduleDays(days?: number[]) {
+    const normalized = [...new Set((days?.length ? days : [0, 1, 2, 3, 4, 5, 6]).map(Number))]
+      .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6)
+      .sort((a, b) => a - b);
+    return normalized.length ? normalized : [0, 1, 2, 3, 4, 5, 6];
+  }
+
+  private isScheduledForDay(habit: Habit, weekday: number) {
+    const days = habit.scheduleDays?.length ? habit.scheduleDays.map(Number) : [0, 1, 2, 3, 4, 5, 6];
+    return days.includes(weekday);
   }
 }

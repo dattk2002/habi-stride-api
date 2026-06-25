@@ -35,15 +35,15 @@ export class ChatController {
     @Query('message') message: string,
     @Query('include_context') includeContext?: string,
   ) {
-    const assistantMessage = await this.chatService.createAssistantMessage(user.sub, {
+    const result = await this.chatService.createAssistantMessage(user.sub, {
       message,
       include_context: includeContext === 'true',
     });
-    const chunks = assistantMessage.content.match(/.{1,24}(\s|$)/g) || [assistantMessage.content];
+    const chunks = result.message.content.match(/.{1,24}(\s|$)/g) || [result.message.content];
 
     return from(chunks).pipe(
       concatMap((chunk) => of(chunk.trim()).pipe(delay(40))),
-      map((chunk) => ({ data: { chunk, messageId: assistantMessage.id } })),
+      map((chunk) => ({ data: { chunk, messageId: result.message.id, provider: result.provider } })),
     );
   }
 }

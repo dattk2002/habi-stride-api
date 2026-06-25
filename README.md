@@ -26,6 +26,39 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## PostgreSQL and pgAdmin 4
+
+Application data is persisted in the PostgreSQL container and the `postgres_data` named volume. Habit creation writes both `habits` and `habit_stats` in one database transaction, so a partial habit cannot be left behind.
+
+Use this connection in pgAdmin 4:
+
+- Host: `127.0.0.1`
+- Port: `5434`
+- Maintenance database: `HabiStride`
+- Username: `postgres`
+- Password: the value of `POSTGRES_PASSWORD` in `docker-compose.yml`
+
+The Docker network uses `postgres:5432` internally. Port `5434` is intentionally used on Windows because the locally installed PostgreSQL service already occupies port `5433`.
+
+Start the complete stack with:
+
+```bash
+docker compose up -d --build
+```
+
+## Gemini chatbot
+
+Copy `.env.example` to `.env` and provide `GEMINI_API_KEY`. The server uses `@google/genai` with `gemini-2.5-flash` by default. If the key is missing or Gemini is unavailable, chat returns a local fallback response without exposing credentials to the browser.
+
+## Authentication and email verification
+
+- `GOOGLE_CLIENT_ID`: Google OAuth 2.0 Web Client ID. The backend verifies Google ID tokens and their audience.
+- `RESEND_API_KEY`: Resend API key used to deliver six-digit registration OTPs.
+- `MAIL_FROM`: verified sender address. `onboarding@resend.dev` is suitable for initial Resend testing; use a verified domain for production recipients.
+- `EMAIL_VERIFICATION_SECRET`: separate secret for short-lived email verification tokens.
+
+Registration flow: request OTP at `POST /auth/verification-email/request`, verify it at `POST /auth/verification-email/verify`, then pass the returned `verificationToken` to `POST /auth/register`.
+
 ## Project setup
 
 ```bash

@@ -1,4 +1,22 @@
 services:
+  ui:
+    build:
+      context: ../habistride-nextjs-ui
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    container_name: habistride_ui
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:3000
+      PORT: 3001
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    ports:
+      - "3100:3001"
+    depends_on:
+      - api
+
   api:
     build: .
     container_name: habistride_api
@@ -14,6 +32,12 @@ services:
       JWT_REFRESH_SECRET: local-refresh-secret
       JWT_ACCESS_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-HabiStride <onboarding@resend.dev>}
+      EMAIL_VERIFICATION_SECRET: ${EMAIL_VERIFICATION_SECRET:-local-email-verification-secret}
     ports:
       - "3000:3000"
     depends_on:
@@ -29,7 +53,7 @@ services:
       POSTGRES_PASSWORD: Kim123Dat@
       POSTGRES_DB: HabiStride
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

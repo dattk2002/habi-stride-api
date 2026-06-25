@@ -24,6 +24,8 @@ import { TreeModule } from './tree/tree.module';
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
+        migrations: ['dist/migrations/*.js'],
+        migrationsRun: true,
         autoLoadEntities: true,
         synchronize: true,
       }),

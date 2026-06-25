@@ -4,10 +4,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { ChatMessage } from './entity/chat-message.entity';
-import { UserSetting } from '../user/entity/user-setting.entity';
+import { Habit } from '../habits/entity/habit.entity';
+import { HabitStat } from '../habits/entity/habit-stat.entity';
 
 @Module({
-  imports: [JwtModule.register({}), TypeOrmModule.forFeature([ChatMessage, UserSetting])],
+  imports: [JwtModule.register({}), TypeOrmModule.forFeature([ChatMessage, Habit, HabitStat])],
   controllers: [ChatController],
   providers: [ChatService],
 })

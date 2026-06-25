@@ -15,6 +15,15 @@ export class UserStat {
   @Column({ name: 'highest_streak', default: 0 })
   highestStreak: number;
 
+  @Column({ name: 'total_login_days', default: 0 })
+  totalLoginDays: number;
+
+  @Column({ name: 'current_login_streak', default: 0 })
+  currentLoginStreak: number;
+
+  @Column({ name: 'last_login_date', type: 'date', nullable: true })
+  lastLoginDate: string | null;
+
   @OneToOne(() => User, (user) => user.stat, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;

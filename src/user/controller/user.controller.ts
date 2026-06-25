@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { UserService } from '../service/user.service';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { DeleteUserDto } from '../dto/delete-user.dto';
@@ -36,6 +37,18 @@ export class UserController {
     @Body() dto: UpdateUserDto,
   ) {
     return this.userService.update(currentUser.sub, id, dto);
+  }
+
+  @ApiOperation({ summary: 'Upload the current user avatar' })
+  @ApiConsumes('multipart/form-data')
+  @Post(':id/avatar')
+  @UseInterceptors(FileInterceptor('avatar'))
+  uploadAvatar(
+    @CurrentUser() currentUser: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file?: { buffer: Buffer; mimetype: string; size: number },
+  ) {
+    return this.userService.uploadAvatar(currentUser.sub, id, file);
   }
 
   @ApiOperation({ summary: 'Delete a user' })

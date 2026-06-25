@@ -1,38 +1,34 @@
-import { Body, Controller, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Post } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { UpdateBotPersonalityDto } from './dto/update-bot-personality.dto';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import type { CurrentUserPayload } from '../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RequestEmailOtpDto } from './dto/request-email-otp.dto';
+import { VerifyEmailOtpDto } from './dto/verify-email-otp.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiOperation({ summary: 'Register and receive auth tokens' })
+  @ApiOperation({ summary: 'Send a registration OTP to an email address' })
+  @Post('verification-email/request')
+  requestEmailVerification(@Body() dto: RequestEmailOtpDto) { return this.authService.requestEmailVerification(dto); }
+
+  @ApiOperation({ summary: 'Verify the registration OTP' })
+  @Post('verification-email/verify')
+  verifyEmail(@Body() dto: VerifyEmailOtpDto) { return this.authService.verifyEmail(dto); }
+
+  @ApiOperation({ summary: 'Register with a verified email' })
   @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
-  }
+  register(@Body() dto: RegisterDto) { return this.authService.register(dto); }
 
-  @ApiOperation({ summary: 'Login and receive auth tokens' })
+  @ApiOperation({ summary: 'Login with email and password' })
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
-  }
+  login(@Body() dto: LoginDto) { return this.authService.login(dto); }
 
-  @ApiOperation({ summary: 'Update authenticated user bot personality' })
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
-  @Patch('bot-personality')
-  updateBotPersonality(
-    @CurrentUser() user: CurrentUserPayload,
-    @Body() dto: UpdateBotPersonalityDto,
-  ) {
-    return this.authService.updateBotPersonality(user.sub, dto);
-  }
+  @ApiOperation({ summary: 'Login or register with a Google ID token' })
+  @Post('google')
+  googleLogin(@Body() dto: GoogleAuthDto) { return this.authService.googleLogin(dto); }
 }

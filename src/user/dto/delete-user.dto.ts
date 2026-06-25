@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail } from 'class-validator';
 
 export class DeleteUserDto {
-  @ApiProperty({ example: 'I no longer want to use this account.' })
-  reason: string;
+  @ApiProperty({ example: 'user@example.com', description: 'Re-enter the account email to confirm deletion.' })
+  @IsEmail()
+  email: string;
 }

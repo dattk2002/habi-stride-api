@@ -22,6 +22,9 @@ export class Habit {
   @Column({ type: 'varchar', default: HabitFrequency.DAILY })
   frequency: HabitFrequency;
 
+  @Column({ name: 'schedule_days', type: 'jsonb', default: () => "'[0,1,2,3,4,5,6]'::jsonb" })
+  scheduleDays: number[];
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

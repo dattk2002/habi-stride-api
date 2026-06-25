@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entity/user.entity';
-import { UserSetting } from './entity/user-setting.entity';
 import { UserStat } from './entity/user-stat.entity';
 import { UserService } from './service/user.service';
 import { UserController } from './controller/user.controller';
@@ -19,7 +18,6 @@ import { UserAchievement } from '../tree/entity/user-achievement.entity';
     JwtModule.register({}),
     TypeOrmModule.forFeature([
       User,
-      UserSetting,
       UserStat,
       Habit,
       DailyLog,
