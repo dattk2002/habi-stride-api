@@ -5,13 +5,36 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const port = process.env.PORT ?? '3000';
+  const apiUrl =
+    process.env.NODE_ENV === 'production' && process.env.API_URL_PRODUCTION
+      ? process.env.API_URL_PRODUCTION.replace(/\/$/, '')
+      : `http://localhost:${port}`;
+
+  const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
+    credentials: true,
+  });
+
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const config = new DocumentBuilder()
     .setTitle('HabiStride API')
-    .setDescription('Local API documentation for HabiStride backend')
+    .setDescription('API documentation for HabiStride backend')
     .setVersion('1.0')
-    .addServer('http://localhost:3000', 'Local backend')
+    .addServer(apiUrl, process.env.NODE_ENV === 'production' ? 'Production backend' : 'Local backend')
     .addBearerAuth(
       {
         type: 'http',
@@ -25,6 +48,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(port);
 }
 bootstrap();
