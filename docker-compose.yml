@@ -26,10 +26,10 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USERNAME: postgres
-      DB_PASSWORD: Kim123Dat@
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
       DB_DATABASE: HabiStride
-      JWT_ACCESS_SECRET: local-access-secret
-      JWT_REFRESH_SECRET: local-refresh-secret
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env}
       JWT_ACCESS_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Kim123Dat@
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
       POSTGRES_DB: HabiStride
     ports:
       - "5434:5432"

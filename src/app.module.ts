@@ -17,18 +17,26 @@ import { TreeModule } from './tree/tree.module';
     ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: Number(configService.get('DB_PORT')), 
-        username: configService.get('DB_USERNAME'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_DATABASE'),
-        migrations: ['dist/migrations/*.js'],
-        migrationsRun: true,
-        autoLoadEntities: true,
-        synchronize: true,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+
+        return {
+          type: 'postgres',
+          ...(databaseUrl
+            ? { url: databaseUrl }
+            : {
+                host: configService.get<string>('DB_HOST'),
+                port: Number(configService.get('DB_PORT') ?? 5432),
+                username: configService.get<string>('DB_USERNAME'),
+                password: configService.get<string>('DB_PASSWORD'),
+                database: configService.get<string>('DB_DATABASE'),
+              }),
+          migrations: ['dist/migrations/*.js'],
+          migrationsRun: true,
+          autoLoadEntities: true,
+          synchronize: true,
+        };
+      },
       inject: [ConfigService],
     }),
     AuthModule,
